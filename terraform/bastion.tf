@@ -26,7 +26,7 @@ most often used when a VPN is not available
 data "template_file" "startup_script" {
   template = <<EOF
 sudo apt-get update -y
-sudo apt-get install -y kubectl
+sudo apt-get install -y kubectl mc git
 echo "gcloud container clusters get-credentials $${cluster_name} --zone $${cluster_zone} --project $${project}" >> /etc/profile
 EOF
 
@@ -60,9 +60,9 @@ resource "google_compute_instance" "gke-bastion" {
   network_interface {
     subnetwork = google_compute_subnetwork.cluster-subnet.self_link
 
-    // Add an ephemeral external IP.
+    // Add an static external IP.
     access_config {
-      // Implicit ephemeral IP
+      nat_ip = google_compute_address.vm_bastion_static_ip.address
     }
   }
 

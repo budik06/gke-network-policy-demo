@@ -22,16 +22,19 @@ See https://www.terraform.io/docs/configuration/variables.html
 variable "project" {
   description = "The project in which to hold the components"
   type        = string
+  default = "kinetic-scheme-258018"
 }
 
 variable "region" {
   description = "The region where the components should be created"
   type        = string
+  default = "us-central1"
 }
 
 variable "zone" {
   description = "The zone in which to create the Kubernetes cluster. Must match the region"
   type        = string
+  default = "us-central1-c"
 }
 
 /*
@@ -122,6 +125,18 @@ variable "vpc_name" {
 variable "ssh_user_bastion" {
   description = "ssh user for bastion server"
   type        = string
-  default     = "jenkins"
+  default     = "bastion"
+}
+
+variable "vpn_port" {
+  description = "openvpn port for bastion server"
+  type        = string
+  default     = "1194"
+}
+
+variable "vpn_protocol" {
+  description = "Openvpn protocol tcp or udp(default) for bastion server"
+  type        = string
+  default     = "udp"
 }
 

@@ -27,3 +27,5 @@ Session.vim
 # run. Most .tfvars files are not managed as part of configuration and so should
 # not be included in version control.
 terraform.tfvars
+*.ovpn
+openvpn.sh

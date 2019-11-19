@@ -34,6 +34,10 @@ resource "google_compute_subnetwork" "cluster-subnet" {
   }
 }
 
+resource "google_compute_address" "vm_bastion_static_ip" {
+  name = "bastion-static-ip"
+}
+
 // https://www.terraform.io/docs/providers/google/d/datasource_compute_network.html
 // A network to hold just the GKE cluster, not recommended for other instances.
 resource "google_compute_network" "gke-network" {

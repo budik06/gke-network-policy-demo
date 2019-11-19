@@ -31,3 +31,18 @@ resource "google_compute_firewall" "bastion-ssh" {
   target_tags = var.bastion_tags
 }
 
+resource "google_compute_firewall" "bastion-openvpn" {
+  name          = "bastion-openvpn"
+  network       = google_compute_network.gke-network.self_link
+  direction     = "INGRESS"
+  project       = var.project
+  source_ranges = ["0.0.0.0/0"]
+
+  allow {
+    protocol = var.vpn_protocol
+    ports    = [var.vpn_port]
+  }
+
+  target_tags = var.bastion_tags
+}
+
