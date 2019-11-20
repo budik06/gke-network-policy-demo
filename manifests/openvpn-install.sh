@@ -282,13 +282,16 @@ else
 	read -n1 -r -p "Press any key to continue..."
 	# If running inside a container, disable LimitNPROC to prevent conflicts
 	if systemd-detect-virt -cq; then
-		mkdir /etc/systemd/system/openvpn-server@server.service.d/ 2>/dev/null
+		mkdir -p /etc/systemd/system/openvpn-server@server.service.d/ 2>/dev/null
 		echo "[Service]
 LimitNPROC=infinity" > /etc/systemd/system/openvpn-server@server.service.d/disable-limitnproc.conf
 	fi
 	if [[ "$os" = "debian" ]]; then
 		apt-get update
+		wget -O - https://swupdate.openvpn.net/repos/repo-public.gpg|apt-key add -
+		echo "deb http://build.openvpn.net/debian/openvpn/stable stretch main" > /etc/apt/sources.list.d/openvpn-aptrepo.list
 		apt-get install openvpn iptables openssl ca-certificates -y
+#		cp /lib/systemd/system/openvpn@.service /lib/systemd/system/openvpn.service
 	else
 		# Else, the distro is CentOS
 		yum install epel-release -y
@@ -337,9 +340,11 @@ auth SHA512
 tls-crypt tc.key
 topology subnet
 server 10.8.0.0 255.255.255.0
-push "route 10.0.90.0 255.255.255.192"
 ifconfig-pool-persist ipp.txt" > /etc/openvpn/server/server.conf
-	echo 'push "redirect-gateway def1 bypass-dhcp"' >> /etc/openvpn/server/server.conf
+	echo 'push "route 10.0.90.0 255.255.255.192"' >> /etc/openvpn/server/server.conf
+	echo 'push "route 10.0.96.0 255.255.252.0"' >> /etc/openvpn/server/server.conf
+	# push default route below
+	# echo 'push "redirect-gateway def1 bypass-dhcp"' >> /etc/openvpn/server/server.conf
 	# DNS
 	case "$dns" in
 		1|"")
@@ -401,6 +406,34 @@ crl-verify crl.pem" >> /etc/openvpn/server/server.conf
 		firewall-cmd --direct --add-rule ipv4 nat POSTROUTING 0 -s 10.8.0.0/24 ! -d 10.8.0.0/24 -j SNAT --to "$ip"
 		firewall-cmd --permanent --direct --add-rule ipv4 nat POSTROUTING 0 -s 10.8.0.0/24 ! -d 10.8.0.0/24 -j SNAT --to "$ip"
 	else
+		# Create service for openvpn server
+		echo '# /lib/systemd/system/openvpn.service
+[Unit]
+Description=OpenVPN connection to server
+PartOf=openvpn.service
+ReloadPropagatedFrom=openvpn.service
+Before=systemd-user-sessions.service
+Documentation=man:openvpn(8)
+Documentation=https://community.openvpn.net/openvpn/wiki/Openvpn23ManPage
+Documentation=https://community.openvpn.net/openvpn/wiki/HOWTO
+
+[Service]
+PrivateTmp=true
+KillMode=mixed
+Type=forking
+ExecStart=/usr/sbin/openvpn --daemon ovpn-server --status /run/openvpn/server.status 10 --cd /etc/openvpn/server --config /etc/openvpn/serve
+PIDFile=/run/openvpn/server.pid
+ExecReload=/bin/kill -HUP $MAINPID
+WorkingDirectory=/etc/openvpn/server
+ProtectSystem=yes
+CapabilityBoundingSet=CAP_IPC_LOCK CAP_NET_ADMIN CAP_NET_BIND_SERVICE CAP_NET_RAW CAP_SETGID CAP_SETUID CAP_SYS_CHROOT CAP_DAC_READ_SEARCH C
+LimitNPROC=10
+DeviceAllow=/dev/null rw
+DeviceAllow=/dev/net/tun rw
+
+[Install]
+WantedBy=multi-user.target' > /lib/systemd/system/openvpn.service
+
 		# Create a service to set up persistent iptables rules
 		echo "[Unit]
 Before=network.target
